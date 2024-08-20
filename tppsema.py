@@ -13,7 +13,6 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
-
 import ply.yacc as yacc
 
 # Get the token map from the lexer.  This is required.
@@ -28,12 +27,6 @@ from myerror import MyError
 error_handler = MyError('SemaErrors')
 
 root = None
-
-
-
-
-
-
 
 # Programa Principal.
 if __name__ == "__main__":
