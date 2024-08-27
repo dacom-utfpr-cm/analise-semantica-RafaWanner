@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import json
+import re
 
 from sys import argv, exit
 
@@ -24,7 +25,7 @@ from tpplex import tokens
 
 from mytree import MyNode
 from anytree.exporter import DotExporter, UniqueDotExporter
-from anytree import RenderTree, AsciiStyle
+from anytree import Node, RenderTree, AsciiStyle
 
 from myerror import MyError
 
@@ -36,6 +37,43 @@ checkKey = False
 checkTpp = False
 
 root = None
+
+# Reconstruir Arvore
+def parse_label(line):
+    match = re.search(r'\[label="(.+?)"\]', line)
+    return match.group(1) if match else None
+
+def reconstruct_tree_from_dot(filepath):
+    nodes = {}
+    edges = []
+
+    with open(filepath, 'r') as file:
+        lines = file.readlines()
+
+    for line in lines:
+        line = line.strip()
+        if '->' in line:  # Process edge
+            parent, child = line.split(' -> ')
+            parent = parent.strip().strip('"')
+            child = child.strip().strip(';').strip('"')
+            edges.append((parent, child))
+        elif '[' in line and 'label=' in line:  # Process node
+            node_id = line.split(' ')[0].strip().strip('"')
+            label = parse_label(line)
+            nodes[node_id] = Node(label)
+
+    # Creating the tree structure by connecting nodes
+    for parent, child in edges:
+        nodes[child].parent = nodes[parent]
+
+    # Finding the root (the node without a parent)
+    root = None
+    for node in nodes.values():
+        if node.is_root:
+            root = node
+            break
+
+    return root
 
 # Programa Principal.
 def run_tppparser(args):
@@ -88,6 +126,14 @@ def main():
         # For example, if stdout contains the `root` information or any result:
         print(stdout) # mostra os print to tpparser
         # Parse `stdout` if it contains relevant data
+
+        # Example usage:
+        filepath = sys.argv[1] + ".unique.ast.dot"
+        root = reconstruct_tree_from_dot(filepath)
+
+        # To visualize the tree:
+        for pre, fill, node in RenderTree(root):
+            print(f"{pre}{node.name}")
     
     if len(errorArray) > 0:
         raise IOError(errorArray)
