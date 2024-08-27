@@ -955,8 +955,8 @@ def main():
     print('\n--------------------------------------------- p_error ---------------------------------------------\n')
 
     if(len(sys.argv) < 2):
-        errorArray.append(error_handler.newError(checkKey, 'ERR-LEX-USE'))
-        raise TypeError(error_handler.newError(checkKey, 'ERR-LEX-USE'))
+        errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-USE'))
+        raise TypeError(error_handler.newError(checkKey, 'ERR-SYN-USE'))
 
     posArgv = 0
 
@@ -970,13 +970,13 @@ def main():
             checkKey = True
     
     if checkKey and len(sys.argv) < 3:
-        errorArray.append(le.newError(checkKey, 'ERR-LEX-USE'))
+        errorArray.append(le.newError(checkKey, 'ERR-SYN-USE'))
         raise TypeError(errorArray)
     elif not checkTpp:
-        errorArray.append(le.newError(checkKey, 'ERR-LEX-NOT-TPP'))
+        errorArray.append(le.newError(checkKey, 'ERR-SYN-NOT-TPP'))
         raise IOError(errorArray)
     elif not os.path.exists(argv[posArgv]):
-        errorArray.append(le.newError(checkKey, 'ERR-LEX-FILE-NOT-EXISTS'))
+        errorArray.append(le.newError(checkKey, 'ERR-SYN-FILE-NOT-EXISTS'))
         raise IOError(errorArray)
     else:
         data = open(argv[posArgv])
@@ -1007,6 +1007,8 @@ def main():
     
     if len(errorArray) > 0:
         raise IOError(errorArray)
+    
+    return root
 
 if __name__ == "__main__": 
     try:
@@ -1015,9 +1017,7 @@ if __name__ == "__main__":
         print('\n--------------------------------------------- ERR-SYN ---------------------------------------------\n')
         for x in range(len(e.args[0])):
             print (e.args[0][x])
-        print('\n---------------------------------------------------------------------------------------------------\n')
     except (ValueError, TypeError):
         print('\n-------------------------------------------------------------------------------------------\n')
         for x in range(len(e.args[0])):
             print (e.args[0][x])
-        print('\n-------------------------------------------------------------------------------------------\n')
