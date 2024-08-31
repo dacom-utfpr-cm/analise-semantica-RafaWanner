@@ -934,6 +934,7 @@ def p_vazio(p):
 
 
 def p_error(p):
+    print('\n--------------------------------------------- p_error ---------------------------------------------\n')
 
     if p:
         token = p
@@ -947,20 +948,18 @@ def p_error(p):
 parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
                    debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
 
-def main():
+def main(args):
     global checkKey
     global checkTpp
     global errorArray
-    
-    print('\n--------------------------------------------- p_error ---------------------------------------------\n')
 
-    if(len(sys.argv) < 2):
+    if(len(args) < 2):
         errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-USE'))
         raise TypeError(error_handler.newError(checkKey, 'ERR-SYN-USE'))
 
     posArgv = 0
 
-    for idx,arg in enumerate(sys.argv):
+    for idx,arg in enumerate(args):
         aux = arg.split('.')
         if aux[-1] == 'tpp':
             checkTpp = True
@@ -969,17 +968,17 @@ def main():
         if arg == "-k":
             checkKey = True
     
-    if checkKey and len(sys.argv) < 3:
+    if checkKey and len(args) < 3:
         errorArray.append(le.newError(checkKey, 'ERR-SYN-USE'))
         raise TypeError(errorArray)
     elif not checkTpp:
         errorArray.append(le.newError(checkKey, 'ERR-SYN-NOT-TPP'))
         raise IOError(errorArray)
-    elif not os.path.exists(argv[posArgv]):
+    elif not os.path.exists(args[posArgv]):
         errorArray.append(le.newError(checkKey, 'ERR-SYN-FILE-NOT-EXISTS'))
         raise IOError(errorArray)
     else:
-        data = open(argv[posArgv])
+        data = open(args[posArgv])
 
         source_file = data.read()
         parser.parse(source_file)
@@ -988,11 +987,11 @@ def main():
         print("\n------------------------------------------- SYNTAX TREE -------------------------------------------\n")
         print("Generating Syntax Tree Graph...")
         # DotExporter(root).to_picture(argv[1] + ".ast.png")
-        UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
-        DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
-        UniqueDotExporter(root).to_dotfile(argv[1] + ".unique.ast.dot")
+        UniqueDotExporter(root).to_picture(args[1] + ".unique.ast.png")
+        DotExporter(root).to_dotfile(args[1] + ".ast.dot")
+        UniqueDotExporter(root).to_dotfile(args[1] + ".unique.ast.dot")
         #print(RenderTree(root, style=AsciiStyle()).by_attr())
-        print("Graph was generated.\nOutput file: " + argv[1] + ".ast.png")
+        print("Graph was generated.\nOutput file: " + args[1] + ".ast.png")
 
         # DotExporter(root, graph="graph",
         #            nodenamefunc=MyNode.nodenamefunc,
@@ -1001,18 +1000,19 @@ def main():
         #            edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
 
         # DotExporter(root, nodenamefunc=lambda node: node.label).to_picture(argv[1] + ".ast3.png")
+        
+        return root
 
     else:
         errorArray.append(error_handler.newError(checkKey, 'WAR-SYN-NOT-GEN-SYN-TREE'))
-    
+
     if len(errorArray) > 0:
         raise IOError(errorArray)
     
-    return root
 
 if __name__ == "__main__": 
     try:
-        main()
+        main(sys.argv)
     except Exception as e:
         print('\n--------------------------------------------- ERR-SYN ---------------------------------------------\n')
         for x in range(len(e.args[0])):

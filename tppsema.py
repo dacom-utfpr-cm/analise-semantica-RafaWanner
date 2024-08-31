@@ -36,61 +36,181 @@ le = MyError('LexerErrors')
 checkKey = False
 checkTpp = False
 
+errorArray = []
+
 root = None
 
-# Reconstruir Arvore
-def parse_label(line):
-    match = re.search(r'\[label="(.+?)"\]', line)
-    return match.group(1) if match else None
 
-def reconstruct_tree_from_dot(filepath):
-    nodes = {}
-    edges = []
 
-    with open(filepath, 'r') as file:
-        lines = file.readlines()
+#    def find_node(node, target_name):
+#        if node.name == target_name:
+#            return node
+#        for child in getattr(node, 'children', []):
+#            result = find_node(child, target_name)
+#            if result:
+#                return result
+#        return None
+#
+#    # Search for the 'principal' function declaration in the tree
+#    principal_node = find_node(root, 'principal')
+#    
+#    if principal_node is None:
+#        errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-MAIN-NOT-DECL'))
 
-    for line in lines:
-        line = line.strip()
-        if '->' in line:  # Process edge
-            parent, child = line.split(' -> ')
-            parent = parent.strip().strip('"')
-            child = child.strip().strip(';').strip('"')
-            edges.append((parent, child))
-        elif '[' in line and 'label=' in line:  # Process node
-            node_id = line.split(' ')[0].strip().strip('"')
-            label = parse_label(line)
-            nodes[node_id] = Node(label)
+#    def find_all_nodes(node, target_name, result=None):
+#        if result is None:
+#            result = []
+#        if node.name == target_name:
+#            result.append(node)
+#        for child in getattr(node, 'children', []):
+#            find_all_nodes(child, target_name, result)
+#        return result
+#
+#    # Usage
+#    principal_nodes = find_all_nodes(root, 'principal')
+#    if not principal_nodes:
+#        errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-MAIN-NOT-DECL'))
 
-    # Creating the tree structure by connecting nodes
-    for parent, child in edges:
-        nodes[child].parent = nodes[parent]
 
-    # Finding the root (the node without a parent)
-    root = None
-    for node in nodes.values():
-        if node.is_root:
-            root = node
-            break
 
-    return root
+# Funcoes Basicas
+
+def walk_tree(node, path):
+    """Walk the tree following the given path of node names and return the final node."""
+    current_node = node
+    for name in path:
+        current_node = next((child for child in current_node.children if child.name == name), None)
+        if current_node is None:
+            return None
+    return current_node
+
+def check_node_exists(node, error_code):
+    """Check if node exists, otherwise report an error."""
+    if node is None:
+        errorArray.append(error_handler.newError(checkKey, error_code))
+        return False
+    return True
+
+def find_all_nodes(node, target_name, result=None):
+    if result is None:
+        result = []
+    if node.name == target_name:
+        result.append(node)
+    for child in getattr(node, 'children', []):
+        find_all_nodes(child, target_name, result)
+    return result
+
+def find_all_nodes_children(node, path, result=None):
+    if result is None:
+        result = []
+    
+    # If the path is empty, append the current node to the result
+    if not path:
+        result.append(node)
+        return result
+    
+    # Check if the current node matches the first element of the path
+    if node.name == path[0]:
+        # Recursively search in children with the remaining path
+        for child in getattr(node, 'children', []):
+            find_all_nodes_children(child, path[1:], result)
+    
+    # Continue searching in siblings (children of the parent)
+    for sibling in getattr(node, 'children', []):
+        find_all_nodes_children(sibling, path, result)
+    
+    return result
+
+def find_parent_node(start_node, target_name):
+    """Walk up the tree from the start_node searching for a node with the target_name and return that node."""
+    current_node = start_node
+    
+    while current_node is not None:
+        if current_node.name == target_name:
+            return current_node
+        current_node = current_node.parent  # Move up to the parent node
+
+    return None  # Return None if the target node is not found
+
+# Executor
+def execute_order_66(root):
+    s_funcao_principal(root)
+    s_declaracao_de_funcao(root)
+
+    s_variavel_nao_declarada(root)
+    s_variavel_nao_inicializada(root)
+
+# ---Funções e Procedimentos---
+
+# checa se ha funcao principal
+def s_funcao_principal(root):
+    # Ensure the root node is "programa"
+    if not check_node_exists(root if root.name == "programa" else None, 'ERR-SEM-MAIN-NOT-DECL'):
+        return
+
+    # Define the path for the function we're looking for
+    path_to_main = [
+        "lista_declaracoes", 
+        "declaracao", 
+        "declaracao_funcao", 
+        "cabecalho", 
+        "ID", 
+        "principal"
+    ]
+    
+    # Walk the tree based on the predefined path
+    node_principal = walk_tree(root, path_to_main)
+
+    # Check if we found the main function node ("principal")
+    if not check_node_exists(node_principal, 'ERR-SEM-MAIN-NOT-DECL'):
+        return
+
+# checa se a funcao foi declarada antes de ser chamada
+def s_declaracao_de_funcao(root):
+    pass
+
+# ---Variaveis---
+
+# verifica se a variavel foi lida ou escrita sem ser declarada
+def s_variavel_nao_declarada(root):
+    pass
+
+# verifica se a variavel foi declarada mas nao inicializada
+def s_variavel_nao_inicializada(root):
+    variable_path = [
+        "declaracao_variaveis", 
+        "lista_variaveis", 
+        "var", 
+        "ID"
+    ]
+
+    variables = find_all_nodes_children(root, variable_path)
+
+    for i in range(len(variables)):
+        pai = find_parent_node(variables[i], "cabecalho")
+        if (pai == None):
+            pai = root
+
+        atribuicao_path = [
+            "atribuicao", 
+            "var", 
+            "ID",
+            variables[i].name
+        ]
+
+
+        atribuicoes = find_all_nodes_children(pai, atribuicao_path)
+
+        if not atribuicoes:
+            errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
+        
 
 # Programa Principal.
-def run_tppparser(args):
-    # Construct the command line arguments
-    cmd = ['python', 'tppparser.py'] + args
-    try:
-        # Run the subprocess and capture the output and error
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return result.stdout, None  # Return stdout if no errors
-    except subprocess.CalledProcessError as e:
-        return None, e.stderr  # Return stderr if there was an error
-
 def main():
     global checkKey
     global checkTpp
     global errorArray
-    
+
     if(len(sys.argv) < 2):
         errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-USE'))
         raise TypeError(error_handler.newError(checkKey, 'ERR-SEM-USE'))
@@ -116,24 +236,12 @@ def main():
         errorArray.append(le.newError(checkKey, 'ERR-SEM-FILE-NOT-EXISTS'))
         raise IOError(errorArray)
     else:
-        stdout, stderr = run_tppparser(sys.argv)
-        
-        if stderr:
-            print("Error while running tppparser.py:\n", stderr)
-            sys.exit(1)
-        
-        # If successful, parse and process the result from stdout
-        # For example, if stdout contains the `root` information or any result:
-        print(stdout) # mostra os print to tpparser
-        # Parse `stdout` if it contains relevant data
-
-        # Example usage:
-        filepath = sys.argv[1] + ".unique.ast.dot"
-        root = reconstruct_tree_from_dot(filepath)
+        root = tppparser_main(sys.argv)
+        execute_order_66(root)
 
         # To visualize the tree:
-        for pre, fill, node in RenderTree(root):
-            print(f"{pre}{node.name}")
+        #for pre, fill, node in RenderTree(root):
+        #    print(f"{pre}{node.name}")
     
     if len(errorArray) > 0:
         raise IOError(errorArray)
@@ -143,8 +251,8 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print('\n--------------------------------------------- ERR-SEM ---------------------------------------------\n')
-        #for x in range(len(e.args[0])):
-            #print (e.args[0][x])
+        for x in range(len(e.args[0])):
+            print (e.args[0][x])
     except (ValueError, TypeError):
         print('\n-------------------------------------------------------------------------------------------\n')
         for x in range(len(e.args[0])):
