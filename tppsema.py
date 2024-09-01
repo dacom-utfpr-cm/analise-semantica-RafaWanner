@@ -134,11 +134,11 @@ def find_parent_node(start_node, target_name):
 
 # Executor
 def execute_order_66(root):
-    s_funcao_principal(root)
+    s_funcao_principal(root) # Feita
     s_declaracao_de_funcao(root)
 
     s_variavel_nao_declarada(root)
-    s_variavel_nao_inicializada(root)
+    s_variavel_nao_inicializada(root) # Feita
 
 # ---Funções e Procedimentos---
 
@@ -186,22 +186,26 @@ def s_variavel_nao_inicializada(root):
 
     variables = find_all_nodes_children(root, variable_path)
 
+    atribuicao_path = [
+        "atribuicao",
+        "var",
+        "ID",
+    ]
+
     for i in range(len(variables)):
+        initialized = False
         pai = find_parent_node(variables[i], "cabecalho")
         if (pai == None):
             pai = root
 
-        atribuicao_path = [
-            "atribuicao", 
-            "var", 
-            "ID",
-            variables[i].name
-        ]
-
-
         atribuicoes = find_all_nodes_children(pai, atribuicao_path)
+        
+        for j in range(len(atribuicoes)):
+            if (atribuicoes[j].name == variables[i].name):
+                initialized = True
+                break
 
-        if not atribuicoes:
+        if not initialized:
             errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
         
 
