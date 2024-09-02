@@ -238,8 +238,6 @@ def execute_order_66(root):
     s_variavel_nao_declarada(root)
     s_variavel_declarada_inicializada_utilizada(root) # Feita
 
-    s_indice_nao_inteiro(root) # Feita
-
 
 
 # ---Funções e Procedimentos---
@@ -405,9 +403,38 @@ def s_variavel_declarada_inicializada_utilizada(root):
         atribuicoes = find_all_paths(pai, atribuicao_path)
         expresions = find_all_paths(pai, expression_path)
 
-        #print(variables[i].name)
-        #print(atribuicoes)
-        #print(expresions)
+        print(variables[i].name)
+        print(atribuicoes)
+        print(expresions)
+
+        if (len(variables[i].parent.parent.children) > 1):
+            if (variables[i].parent.parent.children[1].name == "indice"):
+                s_indice_nao_inteiro(variables[i].parent.parent.children[1])
+                return
+            else:
+                pass
+                
+        elif (atribuicoes):
+            for j in range(len(atribuicoes)):
+                if (len(atribuicoes[j].parent.parent.children) > 1):
+                    if (atribuicoes[j].parent.parent.children[1].name == "indice"):
+                        s_indice_nao_inteiro(atribuicoes[j].parent.parent.children[1])
+                        return
+                else:
+                    pass
+
+        elif (expresions):
+            for k in range(len(expresions)):
+                if (len(expresions[k].parent.parent.children) > 1):
+                    if (expresions[k].parent.parent.children[1].name == "indice"):
+                        s_indice_nao_inteiro(expresions[k].parent.parent.children[1])
+                        return
+                else:
+                    pass
+
+
+
+        # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
             if not expresions:
                 errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
@@ -421,6 +448,10 @@ def s_variavel_declarada_inicializada_utilizada(root):
 
 
 # ---Atribuição de tipos distintos e Coerções implícitas---
+
+# verifica se a inicializacao e uso da variavel corresponde a tipagem
+def s_verifica_tipagem_inicializacao_variavel(node_var_receive, node_var_gives):
+    pass
 
 # verifica se a tipagem dos parametros formais e reais sao iguais
 def s_verifica_tipagem_chamada_de_funcao(nodes_formal, nodes_real):
@@ -444,7 +475,6 @@ def s_verifica_tipagem_chamada_de_funcao(nodes_formal, nodes_real):
                 errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG'))
 
         else:
-            # codigo repetido, juntar uma hora dessas
             call_var = parameter_real[0].children[0].children[0]
             comparator_type(call_var, formal_type, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG')
 
@@ -454,7 +484,6 @@ def s_verifica_tipagem_chamada_de_funcao(nodes_formal, nodes_real):
 
 # verifica se o indice do array e um inteiro
 def s_indice_nao_inteiro(root):
-    parent = "declaracao_variaveis"
     indice_path = [
         "indice", 
         "expressao", 
@@ -467,7 +496,7 @@ def s_indice_nao_inteiro(root):
         "numero"
     ]
 
-    indice = find_all_nodes_children_with_parent(root, indice_path, parent)
+    indice = find_all_nodes_children(root, indice_path)
 
     for i in range(len(indice)):
         if (indice[i].name) != "NUM_INTEIRO":
