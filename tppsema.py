@@ -131,6 +131,22 @@ def find_all_paths_excludint_parent(node, path, parent):
 
     return result
 
+def find_all_paths_including_parent(node, path, parent):
+    temp_path = path[1:]
+    result = []
+    temp_result = None
+
+    a = find_all_nodes(node, path[0])
+
+    for i in range(len(a)):
+        if (find_parent_node(a[i], parent) is not None):
+            temp_result = walk_tree(a[i], temp_path)
+
+            if (temp_result is not None):
+                result.append(temp_result)
+
+    return result
+
 def find_all_nodes_children(node, path):
     temp_path = path[1:]
     result = []
@@ -170,6 +186,23 @@ def find_all_nodes_children_with_parent(node, path, parent):
 
         if (temp_result is not None):
             if (find_parent_node(temp_result, parent) is not None):
+                for child in getattr(temp_result, 'children', []):
+                    result.append(child)
+
+    return result
+
+def find_all_nodes_children_with_parent_without_parent(node, path, parent_in, parent_out):
+    temp_path = path[1:]
+    result = []
+    temp_result = None
+
+    a = find_all_nodes(node, path[0])
+
+    for i in range(len(a)):
+        temp_result = walk_tree(a[i], temp_path)
+
+        if (temp_result is not None):
+            if (find_parent_node(temp_result, parent_in) is not None and find_parent_node(temp_result, parent_out) is None):
                 for child in getattr(temp_result, 'children', []):
                     result.append(child)
 
@@ -226,6 +259,9 @@ def comparator_type(node, type_coparasion, error_msg):
 
     if (variable_type != type_coparasion):
             errorArray.append(error_handler.newError(checkKey, error_msg))
+            return False
+    else:
+        return True
 
 
 
@@ -328,14 +364,7 @@ def s_retorno_de_funcao(root):
         "cabecalho",
         "corpo",
         "acao",
-        "retorna",
-        "expressao", 
-        "expressao_logica",
-        "expressao_simples",
-        "expressao_aditiva",
-        "expressao_multiplicativa",
-        "expressao_unaria",
-        "fator"
+        "retorna"
     ]
 
     dec_func = find_all_nodes(root, "declaracao_funcao")
@@ -347,11 +376,20 @@ def s_retorno_de_funcao(root):
 
         if (retorno is not None):
             # checa se o retorno e uma variavel
-            retorno_check = walk_tree(retorno, ["var"])
+            retorno_check = find_all_nodes_children_with_parent(retorno, ["fator", "var", "ID"], "expressao")
 
             if (retorno_check is not None):
-                retorno_var = retorno_check.children[0].children[0]
-                comparator_type(retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR')
+                for j in range(len(retorno_check)):
+                    retorno_var = retorno_check[j]
+                    comparator_type(retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR')
+
+            else:
+                retorno_check = find_all_nodes_children_with_parent(retorno, ["fator", "numero"], "expressao")
+                if (retorno_check is not None):
+                    for j in range(len(retorno_check)):
+                        retorno_var = retorno_check[j]
+                        if (get_string_after_last_underscore(retorno_var.name) != function_type):
+                            errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-FUNC-RET-TYPE-ERROR'))
 
         else:
             errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-FUNC-RET-TYPE-ERROR'))
@@ -388,12 +426,6 @@ def s_variavel_declarada_inicializada_utilizada(root):
         ]
 
         expression_path = [
-            "expressao", 
-            "expressao_logica",
-            "expressao_simples",
-            "expressao_aditiva",
-            "expressao_multiplicativa",
-            "expressao_unaria",
             "fator",
             "var",
             "ID",
@@ -401,38 +433,35 @@ def s_variavel_declarada_inicializada_utilizada(root):
         ]
 
         atribuicoes = find_all_paths(pai, atribuicao_path)
-        expresions = find_all_paths(pai, expression_path)
+        expresions = find_all_paths_including_parent(pai, expression_path, "expressao")
 
-        print(variables[i].name)
-        print(atribuicoes)
-        print(expresions)
+        #print(variables[i].name)
+        #print(atribuicoes)
+        #print(expresions)
 
         if (len(variables[i].parent.parent.children) > 1):
             if (variables[i].parent.parent.children[1].name == "indice"):
                 s_indice_nao_inteiro(variables[i].parent.parent.children[1])
-                return
-            else:
-                pass
+                continue
                 
         elif (atribuicoes):
             for j in range(len(atribuicoes)):
                 if (len(atribuicoes[j].parent.parent.children) > 1):
                     if (atribuicoes[j].parent.parent.children[1].name == "indice"):
                         s_indice_nao_inteiro(atribuicoes[j].parent.parent.children[1])
-                        return
+                        continue
                 else:
-                    pass
+                    if (not s_verifica_tipagem_atribuicao_variavel(variables[i].parent.parent.parent.parent, atribuicoes[j].parent.parent.parent)):
+                        atribuicoes.remove(atribuicoes[j])
 
         elif (expresions):
             for k in range(len(expresions)):
                 if (len(expresions[k].parent.parent.children) > 1):
                     if (expresions[k].parent.parent.children[1].name == "indice"):
                         s_indice_nao_inteiro(expresions[k].parent.parent.children[1])
-                        return
+                        continue
                 else:
                     pass
-
-
 
         # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
@@ -449,8 +478,57 @@ def s_variavel_declarada_inicializada_utilizada(root):
 
 # ---Atribuição de tipos distintos e Coerções implícitas---
 
-# verifica se a inicializacao e uso da variavel corresponde a tipagem
-def s_verifica_tipagem_inicializacao_variavel(node_var_receive, node_var_gives):
+# verifica se a atribuicao da variavel corresponde a tipagem
+def s_verifica_tipagem_atribuicao_variavel(dec_node, atr_node):
+    dec_path = [
+        "lista_variaveis", 
+        "var", 
+        "ID"
+    ]
+
+    num_path = [
+        "fator",
+        "numero"
+    ]
+
+    var_path = [
+        "fator",
+        "var",
+        "ID"
+    ]
+
+    func_path = [
+        "fator",
+        "chamada_funcao"
+    ]
+
+    dec_node_type = dec_node.children[0].children[0]
+
+    atr_node_nums = find_all_nodes_children_with_parent_without_parent(atr_node, num_path, "expressao", "chamada_funcao")
+
+    atr_node_vars = find_all_nodes_children_with_parent_without_parent(atr_node, var_path, "expressao", "chamada_funcao")
+
+    # vai dar errado se tiver funcao dentro de funcao
+    atr_node_funcs = find_all_paths_including_parent(atr_node, func_path, "expressao")
+
+    if (atr_node_nums):
+        for i in range (len(atr_node_nums)):
+            num_type = get_string_after_last_underscore(atr_node_nums[i].name)
+            if (num_type != dec_node_type.name):
+                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-NUM'))
+                return False
+
+    if (atr_node_vars):
+        for i in range (len(atr_node_vars)):
+            return comparator_type(atr_node_vars[i], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-VAR")
+
+    if (atr_node_funcs):
+        for i in range (len(atr_node_funcs)):
+            #print(atr_node_funcs[i].children[0].children[0].name)
+            pass
+
+# verifica se o uso da variavel corresponde a tipagem
+def s_verifica_tipagem_uso_variavel(node_var_receive, node_var_gives):
     pass
 
 # verifica se a tipagem dos parametros formais e reais sao iguais
