@@ -1,13 +1,4 @@
 {Erro: Variável 'c' não declarada}
-
-
-WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP=Atribuição de tipos distintos. Coerção implícita do valor de '{}' que é do tipo '{}' para '{}' que é '{}'.
-WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-RET-VAL=Atribuição de tipos distintos. Coerção implícita do valor retornado por '{}' que é do tipo '{}' para '{}' que é '{}'.
-WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-NUM=
-
-
-Atribuição de tipos distintos. Coerção implícita do valor de 'b' que é do tipo 'inteiro' para 'a' que é 'flutuante'.
-
 {Aviso: Coerção implícita do valor de 'b', 'inteiro' para 'flutuante'}
 {Aviso: Coerção implícita do valor de 'expressao', 'inteiro' para 'flutuante'}
 {Aviso: Atribuição de tipos distintos. Coerção implícita do valor atribuído '15' que é do tipo 'inteiro' para 'a' que é 'flutuante'}

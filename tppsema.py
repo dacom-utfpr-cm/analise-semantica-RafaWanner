@@ -100,25 +100,51 @@ def find_all_nodes(node, target_name, result=None):
         find_all_nodes(child, target_name, result)
     return result
 
-def find_all_nodes_children(node, path, result=None):
-    if result is None:
-        result = []
-    
-    # If the path is empty, append the current node to the result
-    if not path:
-        result.append(node)
-        return result
-    
-    # Check if the current node matches the first element of the path
-    if node.name == path[0]:
-        # Recursively search in children with the remaining path
-        for child in getattr(node, 'children', []):
-            find_all_nodes_children(child, path[1:], result)
-    
-    # Continue searching in siblings (children of the parent)
-    for sibling in getattr(node, 'children', []):
-        find_all_nodes_children(sibling, path, result)
-    
+def find_all_paths(node, path):
+    temp_path = path[1:]
+    result = []
+    temp_result = None
+
+    a = find_all_nodes(node, path[0])
+
+    for i in range(len(a)):
+        temp_result = walk_tree(a[i], temp_path)
+
+        if (temp_result is not None):
+            result.append(temp_result)
+
+    return result
+
+def find_all_paths_excludint_parent(node, path, parent):
+    temp_path = path[1:]
+    result = []
+    temp_result = None
+
+    a = find_all_nodes(node, path[0])
+
+    for i in range(len(a)):
+        if (find_parent_node(a[i], parent) is None):
+            temp_result = walk_tree(a[i], temp_path)
+
+            if (temp_result is not None):
+                result.append(temp_result)
+
+    return result
+
+def find_all_nodes_children(node, path):
+    temp_path = path[1:]
+    result = []
+    temp_result = None
+
+    a = find_all_nodes(node, path[0])
+
+    for i in range(len(a)):
+        temp_result = walk_tree(a[i], temp_path)
+
+        if (temp_result is not None):
+            for child in getattr(temp_result, 'children', []):
+                result.append(child)
+
     return result
 
 def find_parent_node(start_node, target_name):
@@ -132,13 +158,89 @@ def find_parent_node(start_node, target_name):
 
     return None  # Return None if the target node is not found
 
+def find_all_nodes_children_with_parent(node, path, parent):
+    temp_path = path[1:]
+    result = []
+    temp_result = None
+
+    a = find_all_nodes(node, path[0])
+
+    for i in range(len(a)):
+        temp_result = walk_tree(a[i], temp_path)
+
+        if (temp_result is not None):
+            if (find_parent_node(temp_result, parent) is not None):
+                for child in getattr(temp_result, 'children', []):
+                    result.append(child)
+
+    return result
+
+def get_string_after_last_underscore(s):
+    match = re.search(r'_(?!.*_)(.*)', s)
+    if match:
+        return match.group(1)
+    return s  # Return the whole string if no underscore is found
+
+def comparator_type(node, type_coparasion, error_msg):
+    call_var = node
+
+    variable_path = [
+        "declaracao_variaveis",
+        "lista_variaveis",
+        "var",
+        "ID",
+        call_var.name
+    ]
+
+    lista_parametros_path = [
+        "lista_parametros",
+        "parametro", 
+        "id",
+        call_var.name
+    ]
+
+    pai = find_parent_node(call_var, "cabecalho")
+    variable = None
+    variable_type = None
+
+    if (find_all_paths(pai, variable_path)):
+        """Variable Declared On Function"""
+        variable = find_all_paths(pai, variable_path)
+
+        variable_type = find_parent_node(variable[0], "declaracao_variaveis").children[0].children[0].name
+
+    elif (find_all_paths(pai, lista_parametros_path)):
+        """Variable Declared On Function Parameters"""
+        variable = find_all_paths(pai, lista_parametros_path)
+        
+        variable_type = find_parent_node(variable[0], "parametro").children[0].children[0].name
+
+    elif (find_all_paths_excludint_parent(root, variable_path, "cabecalho")):
+        """Variable Declared Globaly"""
+        variable = find_all_paths_excludint_parent(root, variable_path, "cabecalho")
+
+        variable_type = find_parent_node(variable[0], "declaracao_variaveis").children[0].children[0].name
+
+    else:
+        """Variable Not Declared Treat As Null"""
+
+    if (variable_type != type_coparasion):
+            errorArray.append(error_handler.newError(checkKey, error_msg))
+
+
+
 # Executor
 def execute_order_66(root):
     s_funcao_principal(root) # Feita
-    s_declaracao_de_funcao(root)
+    s_declaracao_de_funcao(root) # Feita
+    s_retorno_de_funcao(root) # Feita
 
     s_variavel_nao_declarada(root)
-    s_variavel_nao_inicializada(root) # Feita
+    s_variavel_declarada_inicializada_utilizada(root) # Feita
+
+    s_indice_nao_inteiro(root) # Feita
+
+
 
 # ---Funções e Procedimentos---
 
@@ -167,7 +269,96 @@ def s_funcao_principal(root):
 
 # checa se a funcao foi declarada antes de ser chamada
 def s_declaracao_de_funcao(root):
-    pass
+    function_path = [
+        "chamada_funcao",
+        "ID"
+    ]
+
+    cabecalho_path = [
+        "declaracao",
+        "declaracao_funcao",
+        "cabecalho",
+        "ID"
+    ]
+
+    function_calls = find_all_nodes_children(root, function_path)
+
+    for function_call in function_calls:
+        function_is_declared = False
+        function_node = find_parent_node(function_call, "lista_declaracoes")
+        
+        while function_node:
+            function_check = walk_tree(function_node, cabecalho_path)
+
+            if function_check and function_check.children[0].name == function_call.name:
+                function_is_declared = True
+                s_identificador_de_funcao(function_check.children[0], function_call)
+                break
+            else:
+                function_node = walk_tree(function_node, ["lista_declaracoes"])
+        
+        if not function_is_declared:
+            errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-NOT-DECL'))
+
+# checa se a quantidade de parametros reais e formais de uma funcao sao iguais
+def s_identificador_de_funcao(node_formal, node_real):
+    parameters_path = [
+        "lista_parametros",
+        "parametro"
+    ]
+
+    argumentos_path = [
+        "lista_argumentos",
+        "expressao"
+    ]
+
+    formal_length = find_all_paths(node_formal.parent.parent, parameters_path)
+    real_length = find_all_paths(node_real.parent.parent, argumentos_path)
+
+    if (len(real_length) > len(formal_length)):
+        errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-WITH-MANY-ARGS'))
+
+    elif (len(real_length) < len(formal_length)):
+        errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-WITH-FEW-ARGS'))
+
+    else:
+        s_verifica_tipagem_chamada_de_funcao(formal_length, real_length)
+
+# checa se a funcao foi retornada corretamente
+def s_retorno_de_funcao(root):
+    retorno_path = [
+        "cabecalho",
+        "corpo",
+        "acao",
+        "retorna",
+        "expressao", 
+        "expressao_logica",
+        "expressao_simples",
+        "expressao_aditiva",
+        "expressao_multiplicativa",
+        "expressao_unaria",
+        "fator"
+    ]
+
+    dec_func = find_all_nodes(root, "declaracao_funcao")
+    retorno_var = None
+
+    for i in range(len(dec_func)):
+        retorno = walk_tree(dec_func[i], retorno_path)
+        function_type = dec_func[i].children[0].children[0].name
+
+        if (retorno is not None):
+            # checa se o retorno e uma variavel
+            retorno_check = walk_tree(retorno, ["var"])
+
+            if (retorno_check is not None):
+                retorno_var = retorno_check.children[0].children[0]
+                comparator_type(retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR')
+
+        else:
+            errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-FUNC-RET-TYPE-ERROR'))
+
+
 
 # ---Variaveis---
 
@@ -175,8 +366,8 @@ def s_declaracao_de_funcao(root):
 def s_variavel_nao_declarada(root):
     pass
 
-# verifica se a variavel foi declarada mas nao inicializada
-def s_variavel_nao_inicializada(root):
+# verifica se a variavel foi declarada, utilizada e inicializada
+def s_variavel_declarada_inicializada_utilizada(root):
     variable_path = [
         "declaracao_variaveis", 
         "lista_variaveis", 
@@ -186,28 +377,103 @@ def s_variavel_nao_inicializada(root):
 
     variables = find_all_nodes_children(root, variable_path)
 
-    atribuicao_path = [
-        "atribuicao",
-        "var",
-        "ID",
-    ]
-
     for i in range(len(variables)):
-        initialized = False
         pai = find_parent_node(variables[i], "cabecalho")
         if (pai == None):
             pai = root
 
-        atribuicoes = find_all_nodes_children(pai, atribuicao_path)
-        
-        for j in range(len(atribuicoes)):
-            if (atribuicoes[j].name == variables[i].name):
-                initialized = True
-                break
+        atribuicao_path = [
+            "atribuicao",
+            "var",
+            "ID",
+            variables[i].name
+        ]
 
-        if not initialized:
-            errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
-        
+        expression_path = [
+            "expressao", 
+            "expressao_logica",
+            "expressao_simples",
+            "expressao_aditiva",
+            "expressao_multiplicativa",
+            "expressao_unaria",
+            "fator",
+            "var",
+            "ID",
+            variables[i].name
+        ]
+
+        atribuicoes = find_all_paths(pai, atribuicao_path)
+        expresions = find_all_paths(pai, expression_path)
+
+        #print(variables[i].name)
+        #print(atribuicoes)
+        #print(expresions)
+        if not atribuicoes:
+            if not expresions:
+                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
+
+            else:
+                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
+
+        elif not expresions:
+            errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-INIT-NOT-USED'))
+
+
+
+# ---Atribuição de tipos distintos e Coerções implícitas---
+
+# verifica se a tipagem dos parametros formais e reais sao iguais
+def s_verifica_tipagem_chamada_de_funcao(nodes_formal, nodes_real):
+    parameter_real_path = [
+        "expressao_logica",
+        "expressao_simples",
+        "expressao_aditiva",
+        "expressao_multiplicativa",
+        "expressao_unaria",
+        "fator"
+    ]
+
+    for i in range(len(nodes_formal)):
+        parameter_real = find_all_nodes_children(nodes_real[i], parameter_real_path)
+        formal_type = nodes_formal[i].children[0].children[0].name
+
+        if (parameter_real[0].name != "var"):
+            real_type = get_string_after_last_underscore(parameter_real[0].children[0].name)
+
+            if (real_type != formal_type):
+                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG'))
+
+        else:
+            # codigo repetido, juntar uma hora dessas
+            call_var = parameter_real[0].children[0].children[0]
+            comparator_type(call_var, formal_type, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG')
+
+
+
+# ---Aranjos---
+
+# verifica se o indice do array e um inteiro
+def s_indice_nao_inteiro(root):
+    parent = "declaracao_variaveis"
+    indice_path = [
+        "indice", 
+        "expressao", 
+        "expressao_logica", 
+        "expressao_simples",
+        "expressao_aditiva",
+        "expressao_multiplicativa",
+        "expressao_unaria",
+        "fator",
+        "numero"
+    ]
+
+    indice = find_all_nodes_children_with_parent(root, indice_path, parent)
+
+    for i in range(len(indice)):
+        if (indice[i].name) != "NUM_INTEIRO":
+            errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-ARRAY-INDEX-NOT-INT'))
+
+
 
 # Programa Principal.
 def main():
