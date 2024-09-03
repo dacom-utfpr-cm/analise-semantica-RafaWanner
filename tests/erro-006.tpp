@@ -13,4 +13,5 @@ inteiro principal()
 		escreva(x)
 	senão
 		escreva(x + 1)
+	fim
 fim

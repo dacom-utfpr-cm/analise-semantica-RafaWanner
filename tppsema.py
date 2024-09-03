@@ -440,48 +440,36 @@ def s_variavel_declarada_inicializada_utilizada(root):
         #print(atribuicoes)
         #print(expresions)
 
-        verifica = None
-        verifica_ex = None
-
         if (len(variables[i].parent.parent.children) > 1):
             if (variables[i].parent.parent.children[1].name == "indice"):
                 s_indice_nao_inteiro(variables[i].parent.parent.children[1])
-                continue
                 
-        elif (atribuicoes):
+        if (atribuicoes):
             for j in range(len(atribuicoes)):
                 if (len(atribuicoes[j].parent.parent.children) > 1):
                     if (atribuicoes[j].parent.parent.children[1].name == "indice"):
                         s_indice_nao_inteiro(atribuicoes[j].parent.parent.children[1])
-                        continue
+                        atribuicoes.remove(atribuicoes[j])
                 else:
                     verifica = s_verifica_tipagem_atribuicao_variavel(root, variables[i].parent.parent.parent.parent, atribuicoes[j].parent.parent.parent)
-                    if (verifica):
-                        atribuicoes.remove(atribuicoes[j])
 
-        elif (expresions):
+        if (expresions):
             for k in range(len(expresions)):
                 if (len(expresions[k].parent.parent.children) > 1):
                     if (expresions[k].parent.parent.children[1].name == "indice"):
                         s_indice_nao_inteiro(expresions[k].parent.parent.children[1])
-                        continue
-                else:
-                    verifica_ex = s_verifica_tipagem_uso_variavel(variables[i].parent.parent.parent.parent, find_parent_node(expresions[k], "atribuicao"))
-                    if (verifica_ex):
                         expresions.remove(expresions[k])
+                else:
+                    s_verifica_tipagem_uso_variavel(variables[i].parent.parent.parent.parent, find_parent_node(expresions[k], "atribuicao"))
 
-        if (verifica_ex):
-            continue
-
-        #print(variables[i].name)
-        #print(atribuicoes)
-        #print(expresions)
+        print(variables[i].name)
+        print(atribuicoes)
+        print(expresions)
 
         # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
             if not expresions:
-                if not (verifica and verifica == "f_func"):
-                    errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
+                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
             
             else:
                 errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))

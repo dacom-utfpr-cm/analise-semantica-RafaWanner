@@ -116,6 +116,23 @@ def p_declaracao_variaveis(p):
 #   (inicializacao_variaveis)
 #              |
 #         (atribuicao)
+    
+def p_declaracao_variaveis_error(p):
+    """declaracao_variaveis : tipo DOIS_PONTOS error
+                            | tipo error lista_variaveis
+                            | error DOIS_PONTOS lista_variaveis
+    """
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-DEC-VARIAVEL', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-DEC-VARIAVEL', type='ERROR')
+    p[0] = pai
 
 
 def p_inicializacao_variaveis(p):
@@ -190,9 +207,11 @@ def p_indice_error(p):
                 | indice error expressao FECHA_COLCHETE
                 | indice ABRE_COLCHETE error FECHA_COLCHETE
                 | indice ABRE_COLCHETE expressao error
+                | indice ABRE_COLCHETE error
                 | error expressao FECHA_COLCHETE
                 | ABRE_COLCHETE error FECHA_COLCHETE
                 | ABRE_COLCHETE expressao error
+                | ABRE_COLCHETE error
     """
     
     token = p
@@ -221,7 +240,7 @@ def p_indice_error(p):
     #p[0] = father
 
 
-
+    
     # if len(p) == 4:
     #     p[1] = new_node('ABRECOLCHETES', father)
     #     p[2].parent = father
@@ -934,8 +953,6 @@ def p_vazio(p):
 
 
 def p_error(p):
-    print('\n--------------------------------------------- p_error ---------------------------------------------\n')
-
     if p:
         token = p
         coluna = define_column(token.lexer.lexdata, token.lexpos)
@@ -952,6 +969,8 @@ def main(args):
     global checkKey
     global checkTpp
     global errorArray
+
+    print('\n--------------------------------------------- p_error ---------------------------------------------\n')
 
     if(len(args) < 2):
         errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-USE'))
@@ -1001,14 +1020,14 @@ def main(args):
 
         # DotExporter(root, nodenamefunc=lambda node: node.label).to_picture(argv[1] + ".ast3.png")
         
-        return root
-
     else:
         errorArray.append(error_handler.newError(checkKey, 'WAR-SYN-NOT-GEN-SYN-TREE'))
 
     if len(errorArray) > 0:
         raise IOError(errorArray)
     
+    else:
+        return root
 
 if __name__ == "__main__": 
     try:
