@@ -214,7 +214,7 @@ def get_string_after_last_underscore(s):
         return match.group(1)
     return s  # Return the whole string if no underscore is found
 
-def comparator_type(node, type_coparasion, error_msg):
+def comparator_type(node, type_coparasion, error_msg=None):
     call_var = node
 
     variable_path = [
@@ -258,7 +258,8 @@ def comparator_type(node, type_coparasion, error_msg):
         """Variable Not Declared Treat As Null"""
 
     if (variable_type != type_coparasion):
-            errorArray.append(error_handler.newError(checkKey, error_msg))
+            if(error_msg):
+                errorArray.append(error_handler.newError(checkKey, error_msg))
             return False
     else:
         return True
@@ -378,17 +379,17 @@ def s_retorno_de_funcao(root):
             # checa se o retorno e uma variavel
             retorno_check = find_all_nodes_children_with_parent(retorno, ["fator", "var", "ID"], "expressao")
 
-            if (retorno_check is not None):
+            if (retorno_check):
                 for j in range(len(retorno_check)):
                     retorno_var = retorno_check[j]
                     comparator_type(retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR')
 
             else:
                 retorno_check = find_all_nodes_children_with_parent(retorno, ["fator", "numero"], "expressao")
-                if (retorno_check is not None):
+                if (retorno_check):
                     for j in range(len(retorno_check)):
-                        retorno_var = retorno_check[j]
-                        if (get_string_after_last_underscore(retorno_var.name) != function_type):
+                        retorno_var = get_string_after_last_underscore(retorno_check[j].name)
+                        if (retorno_var != function_type):
                             errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-FUNC-RET-TYPE-ERROR'))
 
         else:
@@ -439,6 +440,9 @@ def s_variavel_declarada_inicializada_utilizada(root):
         #print(atribuicoes)
         #print(expresions)
 
+        verifica = None
+        verifica_ex = None
+
         if (len(variables[i].parent.parent.children) > 1):
             if (variables[i].parent.parent.children[1].name == "indice"):
                 s_indice_nao_inteiro(variables[i].parent.parent.children[1])
@@ -451,7 +455,8 @@ def s_variavel_declarada_inicializada_utilizada(root):
                         s_indice_nao_inteiro(atribuicoes[j].parent.parent.children[1])
                         continue
                 else:
-                    if (not s_verifica_tipagem_atribuicao_variavel(variables[i].parent.parent.parent.parent, atribuicoes[j].parent.parent.parent)):
+                    verifica = s_verifica_tipagem_atribuicao_variavel(root, variables[i].parent.parent.parent.parent, atribuicoes[j].parent.parent.parent)
+                    if (verifica):
                         atribuicoes.remove(atribuicoes[j])
 
         elif (expresions):
@@ -461,13 +466,23 @@ def s_variavel_declarada_inicializada_utilizada(root):
                         s_indice_nao_inteiro(expresions[k].parent.parent.children[1])
                         continue
                 else:
-                    pass
+                    verifica_ex = s_verifica_tipagem_uso_variavel(variables[i].parent.parent.parent.parent, find_parent_node(expresions[k], "atribuicao"))
+                    if (verifica_ex):
+                        expresions.remove(expresions[k])
+
+        if (verifica_ex):
+            continue
+
+        #print(variables[i].name)
+        #print(atribuicoes)
+        #print(expresions)
 
         # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
             if not expresions:
-                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
-
+                if not (verifica and verifica == "f_func"):
+                    errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
+            
             else:
                 errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
 
@@ -479,13 +494,7 @@ def s_variavel_declarada_inicializada_utilizada(root):
 # ---Atribuição de tipos distintos e Coerções implícitas---
 
 # verifica se a atribuicao da variavel corresponde a tipagem
-def s_verifica_tipagem_atribuicao_variavel(dec_node, atr_node):
-    dec_path = [
-        "lista_variaveis", 
-        "var", 
-        "ID"
-    ]
-
+def s_verifica_tipagem_atribuicao_variavel(root, dec_node, atr_node):
     num_path = [
         "fator",
         "numero"
@@ -516,20 +525,43 @@ def s_verifica_tipagem_atribuicao_variavel(dec_node, atr_node):
             num_type = get_string_after_last_underscore(atr_node_nums[i].name)
             if (num_type != dec_node_type.name):
                 errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-NUM'))
-                return False
+                return "f_num"
 
     if (atr_node_vars):
         for i in range (len(atr_node_vars)):
-            return comparator_type(atr_node_vars[i], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-VAR")
+            if (not comparator_type(atr_node_vars[i], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-VAR")):
+                return "f_var"
 
     if (atr_node_funcs):
         for i in range (len(atr_node_funcs)):
-            #print(atr_node_funcs[i].children[0].children[0].name)
-            pass
+            dec_func_path = [
+                "cabecalho",
+                "ID",
+                atr_node_funcs[i].children[0].children[0].name
+            ]
+
+            dec_func_type_path = [
+                "tipo",
+                dec_node_type.name
+            ]
+
+            dec_func = find_all_paths_including_parent(root, dec_func_path, "declaracao_funcao")
+            if (not walk_tree(dec_func[0].parent.parent.parent, dec_func_type_path)):
+                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-RET-VAL'))
+                return "f_func"
 
 # verifica se o uso da variavel corresponde a tipagem
-def s_verifica_tipagem_uso_variavel(node_var_receive, node_var_gives):
-    pass
+def s_verifica_tipagem_uso_variavel(dec_node, exp_node):
+    try:
+        dec_node_type = dec_node.children[0].children[0]
+
+        exp_node_var = exp_node.children[0].children[0].children[0]
+
+        if (exp_node_var):
+            if (not comparator_type(exp_node_var, dec_node_type.name)):
+                return "f_var"
+    except:
+        return
 
 # verifica se a tipagem dos parametros formais e reais sao iguais
 def s_verifica_tipagem_chamada_de_funcao(nodes_formal, nodes_real):
