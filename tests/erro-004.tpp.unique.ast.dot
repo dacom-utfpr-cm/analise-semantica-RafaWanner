@@ -3,7 +3,7 @@ digraph tree {
     "0x1" [label="lista_declaracoes"];
     "0x2" [label="lista_declaracoes"];
     "0x3" [label="declaracao"];
-    "0x4" [label="ERR-SYN-LISTA-VARIAVEL"];
+    "0x4" [label="ERR-SYN-DEC-VAR"];
     "0x5" [label="declaracao"];
     "0x6" [label="declaracao_funcao"];
     "0x7" [label="tipo"];

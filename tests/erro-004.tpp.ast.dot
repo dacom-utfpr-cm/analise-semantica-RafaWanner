@@ -3,7 +3,7 @@ digraph tree {
     "lista_declaracoes";
     "lista_declaracoes";
     "declaracao";
-    "ERR-SYN-LISTA-VARIAVEL";
+    "ERR-SYN-DEC-VAR";
     "declaracao";
     "declaracao_funcao";
     "tipo";
@@ -26,7 +26,7 @@ digraph tree {
     "lista_declaracoes" -> "lista_declaracoes";
     "lista_declaracoes" -> "declaracao";
     "lista_declaracoes" -> "declaracao";
-    "declaracao" -> "ERR-SYN-LISTA-VARIAVEL";
+    "declaracao" -> "ERR-SYN-DEC-VAR";
     "declaracao" -> "declaracao_funcao";
     "declaracao_funcao" -> "tipo";
     "declaracao_funcao" -> "cabecalho";

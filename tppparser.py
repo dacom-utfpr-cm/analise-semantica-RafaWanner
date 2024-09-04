@@ -13,7 +13,6 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
-
 import ply.yacc as yacc
  
 # Get the token map from the lexer.  This is required.
@@ -39,13 +38,6 @@ def define_column(input, lexpos):
     begin_line = input.rfind("\n", 0, lexpos) + 1
     return (lexpos - begin_line) + 1
 
-# Sub-árvore.
-#       (programa)
-#           |
-#   (lista_declaracoes)
-#     /     |      \
-#   ...    ...     ...
-
 def p_programa(p):
     """programa : lista_declaracoes"""
 
@@ -57,10 +49,21 @@ def p_programa(p):
     p[0] = programa
     p[1].parent = programa
 
-#    (lista_declaracoes)                          (lista_declaracoes)
-#          /           \                                    |
-# (lista_declaracoes)  (declaracao)                    (declaracao)
+def p_programa_error(p):
+    """programa : error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
 
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-PROGRAMA', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-PROGRAMA', type='ERROR')
+    p[0] = pai
 
 def p_lista_declaracoes(p):
     """lista_declaracoes : lista_declaracoes declaracao
@@ -73,13 +76,22 @@ def p_lista_declaracoes(p):
     if len(p) > 2:
         p[2].parent = pai
 
-# Sub-árvore.
-#      (declaracao)
-#           |
-#  (declaracao_variaveis ou
-#   inicializacao_variaveis ou
-#   declaracao_funcao)
+def p_lista_declaracoes_error(p):
+    """lista_declaracoes : lista_declaracoes error
+                        | error declaracao
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
 
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-LISTA-DEC', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-LISTA-DEC', type='ERROR')
+    p[0] = pai
 
 def p_declaracao(p):
     """declaracao : declaracao_variaveis
@@ -90,13 +102,21 @@ def p_declaracao(p):
     p[0] = pai
     p[1].parent = pai
 
-# Sub-árvore.
-#      (declaracao_variaveis)
-#      / p[1]    |           \
-# (tipo)    (DOIS_PONTOS)    (lista_variaveis)
-#                |
-#               (:)
+def p_declaracao_error(p):
+    """declaracao : error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
 
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-DEC', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-DEC', type='ERROR')
+    p[0] = pai
 
 def p_declaracao_variaveis(p):
     """declaracao_variaveis : tipo DOIS_PONTOS lista_variaveis"""
@@ -112,16 +132,12 @@ def p_declaracao_variaveis(p):
 
     p[3].parent = pai
 
-# Sub-árvore.
-#   (inicializacao_variaveis)
-#              |
-#         (atribuicao)
-    
 def p_declaracao_variaveis_error(p):
-    """declaracao_variaveis : tipo DOIS_PONTOS error
+    """declaracao_variaveis : error DOIS_PONTOS lista_variaveis
                             | tipo error lista_variaveis
-                            | error DOIS_PONTOS lista_variaveis
+                            | tipo DOIS_PONTOS error
     """
+    
     token = p
     
     global checkKey
@@ -129,12 +145,11 @@ def p_declaracao_variaveis_error(p):
 
     coluna = define_column(token.lexer.lexdata, token.lexpos(2))
 
-    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-DEC-VARIAVEL', line=token.lineno(2), column=coluna))
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-DEC-VAR', line=token.lineno(2), column=coluna))
 
-    pai = MyNode(name='ERR-SYN-DEC-VARIAVEL', type='ERROR')
+    pai = MyNode(name='ERR-SYN-DEC-VAR', type='ERROR')
     p[0] = pai
-
-
+    
 def p_inicializacao_variaveis(p):
     """inicializacao_variaveis : atribuicao"""
 
@@ -142,6 +157,21 @@ def p_inicializacao_variaveis(p):
     p[0] = pai
     p[1].parent = pai
 
+def p_inicializacao_variaveis_error(p):
+    """inicializacao_variaveis : error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-INIT-VAR', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-INIT-VAR', type='ERROR')
+    p[0] = pai
 
 def p_lista_variaveis(p):
     """lista_variaveis : lista_variaveis VIRGULA var
@@ -157,6 +187,24 @@ def p_lista_variaveis(p):
     else:
        p[1].parent = pai
 
+def p_lista_variaveis_error(p):
+    """lista_variaveis : error VIRGULA var
+                        | lista_variaveis error var
+                        | lista_variaveis VIRGULA error
+                        | error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-LISTA-VAR', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-LISTA-VAR', type='ERROR')
+    p[0] = pai
 
 def p_var(p):
     """var : ID
@@ -170,7 +218,6 @@ def p_var(p):
     p[1] = filho
     if len(p) > 2:
         p[2].parent = pai
-
 
 def p_indice(p):
     """indice : indice ABRE_COLCHETE expressao FECHA_COLCHETE
@@ -201,7 +248,6 @@ def p_indice(p):
         filho_sym3 = MyNode(name=p[3], type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
-
 def p_indice_error(p):
     """indice : error ABRE_COLCHETE expressao FECHA_COLCHETE
                 | indice error expressao FECHA_COLCHETE
@@ -226,8 +272,6 @@ def p_indice_error(p):
     pai = MyNode(name='ERR-SYN-INDICE', type='ERROR')
     p[0] = pai
 
-
-
     #print("Erro na definicao do indice. Expressao ou indice.")
 
     #print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}".format(
@@ -251,11 +295,6 @@ def p_indice_error(p):
     #     p[3].parent = father
     #     p[4] = new_node('FECHACOLCHETES', father)
 
-
-# Sub-árvore:
-#    (tipo)
-#      |
-#  (FLUTUANTE)
 def p_tipo(p):
     """tipo : INTEIRO
         | FLUTUANTE
@@ -273,6 +312,21 @@ def p_tipo(p):
         filho1 = MyNode(name='FLUTUANTE', type='FLUTUANTE', parent=pai)
         filho_sym = MyNode(name=p[1], type=p[1].upper(), parent=filho1)
 
+def p_tipo_error(p):
+    """tipo : error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-TIPO', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-TIPO', type='ERROR')
+    p[0] = pai
 
 def p_declaracao_funcao(p):
     """declaracao_funcao : tipo cabecalho 
@@ -285,6 +339,23 @@ def p_declaracao_funcao(p):
     if len(p) == 3:
         p[2].parent = pai
 
+def p_declaracao_funcao_error(p):
+    """declaracao_funcao : error cabecalho 
+                        | tipo error 
+                        | error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-DEC-FUNC', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-DEC-FUNC', type='ERROR')
+    p[0] = pai
 
 def p_cabecalho(p):
     """cabecalho : ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM"""
@@ -311,7 +382,6 @@ def p_cabecalho(p):
     filho6 = MyNode(name='FIM', type='FIM', parent=pai)
     filho_id = MyNode(name='fim', type='FIM', parent=filho6)
     p[6] = filho6
-
 
 def p_cabecalho_error(p):
     """cabecalho : error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM
@@ -351,6 +421,24 @@ def p_lista_parametros(p):
         p[2] = filho2
         p[3].parent = pai
 
+def p_lista_parametros_error(p):
+    """lista_parametros : error VIRGULA parametro
+                    | lista_parametros error parametro
+                    | lista_parametros VIRGULA error
+                    | error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-LISTA-PARAMETROS', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-LISTA-PARAMETROS', type='ERROR')
+    p[0] = pai
 
 def p_parametro(p):
     """parametro : tipo DOIS_PONTOS ID
@@ -377,7 +465,6 @@ def p_parametro(p):
         filho_sym3 = MyNode(name=']', type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
-
 def p_parametro_error(p):
     """parametro : error DOIS_PONTOS ID
                 | tipo error ID
@@ -400,7 +487,6 @@ def p_parametro_error(p):
     pai = MyNode(name='ERR-SYN-PARAMETRO', type='ERROR')
     p[0] = pai
 
-
 def p_corpo(p):
     """corpo : corpo acao
             | vazio
@@ -413,6 +499,23 @@ def p_corpo(p):
     if len(p) > 2:
         p[2].parent = pai
 
+def p_corpo_error(p):
+    """corpo : error acao
+            | corpo error
+            | error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-CORPO', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-CORPO', type='ERROR')
+    p[0] = pai
 
 def p_acao(p):
     """acao : expressao
@@ -427,15 +530,21 @@ def p_acao(p):
     p[0] = pai
     p[1].parent = pai
 
+def p_acao_error(p):
+    """acao : error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
 
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
 
-# Sub-árvore:
-#       ________ (se) ________________________________
-#      /    /          \      \         \      \      \
-# (SE) (expressao)  (ENTAO)  (corpo) (SENAO) (corpo) (FIM)
-#  |       |           |
-# (se)   (...)      (então) ....
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-ACAO', line=token.lineno(2), column=coluna))
 
+    pai = MyNode(name='ERR-SYN-ACAO', type='ERROR')
+    p[0] = pai
 
 def p_se(p):
     """se : SE expressao ENTAO corpo FIM
@@ -472,7 +581,6 @@ def p_se(p):
         filho_fim = MyNode(name=p[5], type='FIM', parent=filho5)
         p[5] = filho5
 
-
 def p_se_error(p):
     """se : error expressao ENTAO corpo FIM
           | SE error ENTAO corpo FIM
@@ -502,7 +610,6 @@ def p_se_error(p):
     pai = MyNode(name='ERR-SYN-SE', type='ERROR')
     p[0] = pai
 
-
 def p_repita(p):
     """repita : REPITA corpo ATE expressao"""
 
@@ -520,7 +627,6 @@ def p_repita(p):
     p[3] = filho3
 
     p[4].parent = pai   # expressao.
-
 
 def p_repita_error(p):
     """repita : error corpo ATE expressao
@@ -555,6 +661,23 @@ def p_atribuicao(p):
 
     p[3].parent = pai
 
+def p_atribuicao_error(p):
+    """atribuicao : error ATRIBUICAO expressao
+                    | var error expressao
+                    | var ATRIBUICAO error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-ATRIBUICAO', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-ATRIBUICAO', type='ERROR')
+    p[0] = pai
 
 def p_leia(p):
     """leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE"""
@@ -576,7 +699,6 @@ def p_leia(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-
 def p_leia_error(p):
     """leia : error ABRE_PARENTESE var FECHA_PARENTESE
             | LEIA error var FECHA_PARENTESE
@@ -596,7 +718,6 @@ def p_leia_error(p):
 
     pai = MyNode(name='ERR-SYN-LEIA', type='ERROR')
     p[0] = pai
-
 
 def p_escreva(p):
     """escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE"""
@@ -618,6 +739,25 @@ def p_escreva(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
+def p_escreva_error(p):
+    """escreva : error ABRE_PARENTESE expressao FECHA_PARENTESE
+                | ESCREVA error expressao FECHA_PARENTESE
+                | ESCREVA ABRE_PARENTESE error FECHA_PARENTESE
+                | ESCREVA ABRE_PARENTESE expressao error
+                | ESCREVA ABRE_PARENTESE error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-ESCREVA', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-ESCREVA', type='ERROR')
+    p[0] = pai
 
 def p_retorna(p):
     """retorna : RETORNA ABRE_PARENTESE expressao FECHA_PARENTESE"""
@@ -639,6 +779,25 @@ def p_retorna(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
+def p_retorna_error(p):
+    """retorna : error ABRE_PARENTESE expressao FECHA_PARENTESE
+                | RETORNA error expressao FECHA_PARENTESE
+                | RETORNA ABRE_PARENTESE error FECHA_PARENTESE
+                | RETORNA ABRE_PARENTESE expressao error
+                | RETORNA ABRE_PARENTESE error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-RETORNA', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-RETORNA', type='ERROR')
+    p[0] = pai
 
 def p_expressao(p):
     """expressao : expressao_logica
@@ -648,10 +807,9 @@ def p_expressao(p):
     p[0] = pai
     p[1].parent = pai
 
-
 def p_expressao_logica(p):
     """expressao_logica : expressao_simples
-                    | expressao_logica operador_logico expressao_simples
+                        | expressao_logica operador_logico expressao_simples
     """
     pai = MyNode(name='expressao_logica', type='EXPRESSAO_LOGICA')
     p[0] = pai
@@ -660,7 +818,6 @@ def p_expressao_logica(p):
     if len(p) > 2:
         p[2].parent = pai
         p[3].parent = pai
-
 
 def p_expressao_simples(p):
     """expressao_simples : expressao_aditiva
@@ -675,7 +832,6 @@ def p_expressao_simples(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_aditiva(p):
     """expressao_aditiva : expressao_multiplicativa
                         | expressao_aditiva operador_soma expressao_multiplicativa
@@ -689,11 +845,10 @@ def p_expressao_aditiva(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_multiplicativa(p):
     """expressao_multiplicativa : expressao_unaria
                                | expressao_multiplicativa operador_multiplicacao expressao_unaria
-        """
+    """
 
     pai = MyNode(name='expressao_multiplicativa',
                  type='EXPRESSAO_MULTIPLICATIVA')
@@ -704,12 +859,11 @@ def p_expressao_multiplicativa(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_unaria(p):
     """expressao_unaria : fator
                         | operador_soma fator
                         | operador_negacao fator
-        """
+    """
     pai = MyNode(name='expressao_unaria', type='EXPRESSAO_UNARIA')
     p[0] = pai
     p[1].parent = pai
@@ -724,7 +878,6 @@ def p_expressao_unaria(p):
 
     if len(p) > 2:
         p[2].parent = pai
-
 
 def p_operador_relacional(p):
     """operador_relacional : MENOR
@@ -760,7 +913,6 @@ def p_operador_relacional(p):
 
     p[1] = filho
 
-
 def p_operador_soma(p):
     """operador_soma : MAIS
                     | MENOS
@@ -775,7 +927,6 @@ def p_operador_soma(p):
        menos_lexema = MyNode(name='-', type='SIMBOLO', parent=menos)
        p[0] = MyNode(name='operador_soma',
                      type='OPERADOR_SOMA', children=[menos])
-
 
 def p_operador_logico(p):
     """operador_logico : E
@@ -792,7 +943,6 @@ def p_operador_logico(p):
         p[0] = MyNode(name='operador_logico',
                       type='OPERADOR_SOMA', children=[filho])
 
-
 def p_operador_negacao(p):
     """operador_negacao : NAO"""
 
@@ -801,7 +951,6 @@ def p_operador_negacao(p):
         negacao_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_negacao',
                       type='OPERADOR_NEGACAO', children=[filho])
-
 
 def p_operador_multiplicacao(p):
     """operador_multiplicacao : VEZES
@@ -817,7 +966,6 @@ def p_operador_multiplicacao(p):
        divide_lexema = MyNode(name=p[1], type='SIMBOLO', parent=divide)
        p[0] = MyNode(name='operador_multiplicacao',
                      type='OPERADOR_MULTIPLICACAO', children=[divide])
-
 
 def p_fator(p):
     """fator : ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -839,7 +987,6 @@ def p_fator(p):
         p[3] = filho3
     else:
         p[1].parent = pai
-
 
 def p_fator_error(p):
     """fator : error expressao FECHA_PARENTESE
@@ -883,7 +1030,6 @@ def p_numero(p):
         aux_val = MyNode(name=p[1], type='VALOR', parent=aux)
         p[1] = aux
 
-
 def p_chamada_funcao(p):
     """chamada_funcao : ID ABRE_PARENTESE lista_argumentos FECHA_PARENTESE"""
 
@@ -906,6 +1052,25 @@ def p_chamada_funcao(p):
     else:
         p[1].parent = pai
 
+def p_chamada_funcao_error(p):
+    """chamada_funcao : error ABRE_PARENTESE lista_argumentos FECHA_PARENTESE
+                    | ID error lista_argumentos FECHA_PARENTESE
+                    | ID ABRE_PARENTESE error FECHA_PARENTESE
+                    | ID ABRE_PARENTESE lista_argumentos error
+                    | ID ABRE_PARENTESE error
+    """
+    
+    token = p
+    
+    global checkKey
+    global errorArray
+
+    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
+
+    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-CHAMADA-FUNC', line=token.lineno(2), column=coluna))
+
+    pai = MyNode(name='ERR-SYN-CHAMADA-FUNC', type='ERROR')
+    p[0] = pai
 
 def p_lista_argumentos(p):
     """lista_argumentos : lista_argumentos VIRGULA expressao
@@ -944,13 +1109,11 @@ def p_lista_argumentos_error(p):
     pai = MyNode(name='ERR-SYN-LISTA-ARGUMENTOS', type='ERROR')
     p[0] = pai
 
-
 def p_vazio(p):
     """vazio : """
 
     pai = MyNode(name='vazio', type='VAZIO')
     p[0] = pai
-
 
 def p_error(p):
     if p:

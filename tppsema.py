@@ -448,23 +448,23 @@ def s_variavel_declarada_inicializada_utilizada(root):
             for j in range(len(atribuicoes)):
                 if (len(atribuicoes[j].parent.parent.children) > 1):
                     if (atribuicoes[j].parent.parent.children[1].name == "indice"):
-                        s_indice_nao_inteiro(atribuicoes[j].parent.parent.children[1])
-                        atribuicoes.remove(atribuicoes[j])
+                        if(s_indice_nao_inteiro(atribuicoes[j].parent.parent.children[1])):
+                            atribuicoes.remove(atribuicoes[j])
                 else:
-                    verifica = s_verifica_tipagem_atribuicao_variavel(root, variables[i].parent.parent.parent.parent, atribuicoes[j].parent.parent.parent)
+                    s_verifica_tipagem_atribuicao_variavel(root, variables[i].parent.parent.parent.parent, atribuicoes[j].parent.parent.parent)
 
         if (expresions):
             for k in range(len(expresions)):
                 if (len(expresions[k].parent.parent.children) > 1):
                     if (expresions[k].parent.parent.children[1].name == "indice"):
-                        s_indice_nao_inteiro(expresions[k].parent.parent.children[1])
-                        expresions.remove(expresions[k])
+                        if(s_indice_nao_inteiro(expresions[k].parent.parent.children[1])):
+                            expresions.remove(expresions[k])
                 else:
                     s_verifica_tipagem_uso_variavel(variables[i].parent.parent.parent.parent, find_parent_node(expresions[k], "atribuicao"))
 
-        print(variables[i].name)
-        print(atribuicoes)
-        print(expresions)
+        #print(variables[i].name)
+        #print(atribuicoes)
+        #print(expresions)
 
         # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
