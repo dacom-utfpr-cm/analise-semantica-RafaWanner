@@ -499,24 +499,6 @@ def p_corpo(p):
     if len(p) > 2:
         p[2].parent = pai
 
-def p_corpo_error(p):
-    """corpo : error acao
-            | corpo error
-            | error
-    """
-    
-    token = p
-    
-    global checkKey
-    global errorArray
-
-    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
-
-    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-CORPO', line=token.lineno(2), column=coluna))
-
-    pai = MyNode(name='ERR-SYN-CORPO', type='ERROR')
-    p[0] = pai
-
 def p_acao(p):
     """acao : expressao
         | declaracao_variaveis
@@ -529,22 +511,6 @@ def p_acao(p):
     pai = MyNode(name='acao', type='ACAO')
     p[0] = pai
     p[1].parent = pai
-
-def p_acao_error(p):
-    """acao : error
-    """
-    
-    token = p
-    
-    global checkKey
-    global errorArray
-
-    coluna = define_column(token.lexer.lexdata, token.lexpos(2))
-
-    errorArray.append(error_handler.newError(checkKey, 'ERR-SYN-ACAO', line=token.lineno(2), column=coluna))
-
-    pai = MyNode(name='ERR-SYN-ACAO', type='ERROR')
-    p[0] = pai
 
 def p_se(p):
     """se : SE expressao ENTAO corpo FIM

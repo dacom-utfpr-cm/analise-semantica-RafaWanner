@@ -276,7 +276,7 @@ def execute_order_66(root):
     s_declaracao_de_funcao(root) # Feita
     s_retorno_de_funcao(root) # Feita
 
-    s_variavel_nao_declarada(root)
+    s_variavel_nao_declarada(root) # Feita
     s_variavel_declarada_inicializada_utilizada(root) # Feita
 
 
@@ -403,9 +403,36 @@ def s_retorno_de_funcao(root):
 
 # ---Variaveis---
 
-# verifica se a variavel foi lida ou escrita sem ser declarada
+# verifica se a variavel foi escrita sem ser declarada
 def s_variavel_nao_declarada(root):
-    pass
+    atribuicao_path = [
+        "atribuicao",
+        "var",
+        "ID"
+    ]
+
+    atribuicoes = find_all_nodes_children(root, atribuicao_path)
+
+    for i in range(len(atribuicoes)):
+        pai = find_parent_node(atribuicoes[i], "cabecalho")
+        if (pai == None):
+            pai = root
+
+        variable_path = [
+            "declaracao_variaveis",
+            "lista_variaveis",
+            "var",
+            "ID",
+            atribuicoes[i].name
+        ]
+
+        variables = find_all_paths(pai, variable_path)
+
+        if (not variables and pai != root):
+            variables = find_all_paths(root, variable_path)
+
+        if (not variables):
+                errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-VAR-NOT-DECL'))
 
 # verifica se a variavel foi declarada, utilizada e inicializada
 def s_variavel_declarada_inicializada_utilizada(root):
@@ -501,9 +528,9 @@ def s_variavel_declarada_inicializada_utilizada(root):
                 else:
                     s_verifica_tipagem_uso_variavel(root, variables[i].parent.parent.parent.parent, find_parent_node(expresions[k], "atribuicao"))
 
-        print(variables[i].name)
-        print(atribuicoes)
-        print(expresions)
+        #print(variables[i].name)
+        #print(atribuicoes)
+        #print(expresions)
 
         # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
