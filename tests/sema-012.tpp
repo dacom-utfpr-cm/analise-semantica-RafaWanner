@@ -5,7 +5,6 @@
 {Aviso: Coerção implícita do valor retornado por 'func', 'inteiro' para 'flutuante'}
 {Aviso: Variável 'a' declarada e inicializada, mas não utilizada}
 {Erro: Função 'principal' deveria retornar 'inteiro', mas retorna 'vazio'}
-
 {função func retorna c que não foi declarada, considerar vazio?}
 
 flutuante: a

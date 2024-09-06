@@ -37,6 +37,7 @@ checkKey = False
 checkTpp = False
 
 errorArray = []
+warningArray = []
 
 root = None
 
@@ -214,7 +215,7 @@ def get_string_after_last_underscore(s):
         return match.group(1)
     return s  # Return the whole string if no underscore is found
 
-def comparator_type(root, node, type_coparasion, error_msg=None, var_dec_check=False):
+def comparator_type(root, node, type_coparasion, error_msg=None, warning_msg=None, var_dec_check=False):
     call_var = node
 
     variable_path = [
@@ -256,14 +257,16 @@ def comparator_type(root, node, type_coparasion, error_msg=None, var_dec_check=F
         variable_type = find_parent_node(variable[0], "declaracao_variaveis").children[0].children[0].name
 
     else:
-        """Variable Not Declared Treat As Null"""   
+        """Variable Not Declared Treat As Null"""
         variable_not_dec = True
 
     if (variable_type != type_coparasion):
             if (var_dec_check and variable_not_dec):
                 errorArray.append(error_handler.newError(checkKey, "ERR-SEM-VAR-NOT-DECL"))
-            elif (error_msg):
+            if (error_msg):
                 errorArray.append(error_handler.newError(checkKey, error_msg))
+            elif (warning_msg):
+                warningArray.append(error_handler.newError(checkKey, warning_msg))
             return False
     else:
         return True
@@ -348,7 +351,7 @@ def s_declaracao_de_funcao(root):
             func_temp = walk_tree(function_node, cabecalho_path).children[0]
             if (func_temp):
                 if (func_temp.name == "principal"):
-                    errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-CALL-REC-FUNC-MAIN'))
+                    warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-CALL-REC-FUNC-MAIN'))
                     continue
             errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-MAIN-NOT-ALLOWED'))
             continue
@@ -367,7 +370,7 @@ def s_declaracao_de_funcao(root):
             errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-NOT-DECL'))
 
     for i in range(len(dec_funcs)):
-        errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-FUNC-DECL-NOT-USED'))
+        warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-FUNC-DECL-NOT-USED'))
 
 # checa se a quantidade de parametros reais e formais de uma funcao sao iguais
 def s_identificador_de_funcao(node_formal, node_real):
@@ -416,7 +419,7 @@ def s_retorno_de_funcao(root):
             if (retorno_check):
                 for j in range(len(retorno_check)):
                     retorno_var = retorno_check[j]
-                    comparator_type(root, retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR', var_dec_check=True)
+                    comparator_type(root, retorno_var, function_type, error_msg='ERR-SEM-FUNC-RET-TYPE-ERROR', var_dec_check=True)
 
             else:
                 retorno_check = find_all_nodes_children_with_parent(retorno, ["fator", "numero"], "expressao")
@@ -482,13 +485,13 @@ def s_variavel_declarada_inicializada_utilizada(root):
             # checa se possui mais de uma declaracao da msm variavel
             if (find_parent_node(variables[i], "lista_declaracoes").children[0].name == "lista_declaracoes"):
                 if (find_all_nodes(find_parent_node(variables[i], "lista_declaracoes").children[0], variables[i].name)):
-                    errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-PREV'))
+                    warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-PREV'))
                     continue
 
         else:
             if (find_parent_node(variables[i], "corpo").children[0].name == "corpo"):
                 if (find_all_nodes(find_parent_node(variables[i], "corpo").children[0], variables[i].name)):
-                    errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-PREV'))
+                    warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-PREV'))
                     continue
 
         variable_check_path = [
@@ -564,13 +567,13 @@ def s_variavel_declarada_inicializada_utilizada(root):
         # verifica se a variavel foi inicializada e ou utilizada
         if not atribuicoes:
             if not expresions:
-                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
+                warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-USED'))
             
             else:
-                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
+                warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-NOT-INIT'))
 
         elif not expresions:
-            errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-INIT-NOT-USED'))
+            warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-VAR-DECL-INIT-NOT-USED'))
 
 
 
@@ -608,7 +611,7 @@ def s_verifica_tipagem_atribuicao_variavel(root, dec_node, atr_node):
             num_type = get_string_after_last_underscore(atr_node_nums[i].name)
             if (num_type != dec_node_type.name):
                  for j in range (len(atr_node_vars)):
-                    if (not comparator_type(root, atr_node_vars[j], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP", var_dec_check=True)):
+                    if (not comparator_type(root, atr_node_vars[j], dec_node_type.name, warning_msg="WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP", var_dec_check=True)):
                         return "f_exp"
     
     if (atr_node_nums and atr_node_funcs):
@@ -629,7 +632,7 @@ def s_verifica_tipagem_atribuicao_variavel(root, dec_node, atr_node):
 
                     dec_func = find_all_paths_including_parent(root, dec_func_path, "declaracao_funcao")
                     if (not walk_tree(dec_func[0].parent.parent.parent, dec_func_type_path)):
-                        errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP'))
+                        warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP'))
                         return "f_exp"
 
     if (atr_node_funcs and atr_node_vars):
@@ -648,19 +651,19 @@ def s_verifica_tipagem_atribuicao_variavel(root, dec_node, atr_node):
             dec_func = find_all_paths_including_parent(root, dec_func_path, "declaracao_funcao")
             if (not walk_tree(dec_func[0].parent.parent.parent, dec_func_type_path)):
                 for j in range (len(atr_node_vars)):
-                    if (not comparator_type(root, atr_node_vars[j], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP", var_dec_check=True)):
+                    if (not comparator_type(root, atr_node_vars[j], dec_node_type.name, warning_msg="WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP", var_dec_check=True)):
                         return "f_var"
 
     if (atr_node_nums):
         for i in range (len(atr_node_nums)):
             num_type = get_string_after_last_underscore(atr_node_nums[i].name)
             if (num_type != dec_node_type.name):
-                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-NUM'))
+                warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-NUM'))
                 return "f_num"
 
     if (atr_node_vars):
         for i in range (len(atr_node_vars)):
-            if (not comparator_type(root, atr_node_vars[i], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-VAR", var_dec_check=True)):
+            if (not comparator_type(root, atr_node_vars[i], dec_node_type.name, warning_msg="WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-VAR", var_dec_check=True)):
                 return "f_var"
 
     if (atr_node_funcs):
@@ -678,7 +681,7 @@ def s_verifica_tipagem_atribuicao_variavel(root, dec_node, atr_node):
 
             dec_func = find_all_paths_including_parent(root, dec_func_path, "declaracao_funcao")
             if (not walk_tree(dec_func[0].parent.parent.parent, dec_func_type_path)):
-                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-RET-VAL'))
+                warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-RET-VAL'))
                 return "f_func"
 
 # verifica se o uso da variavel corresponde a tipagem
@@ -713,11 +716,11 @@ def s_verifica_tipagem_chamada_de_funcao(root, nodes_formal, nodes_real):
             real_type = get_string_after_last_underscore(parameter_real[0].children[0].name)
 
             if (real_type != formal_type):
-                errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG'))
+                warningArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG'))
 
         else:
             call_var = parameter_real[0].children[0].children[0]
-            comparator_type(root, call_var, formal_type, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG')
+            comparator_type(root, call_var, formal_type, warning_msg='WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-FUNC-ARG')
 
 
 
@@ -753,6 +756,7 @@ def main():
     global checkKey
     global checkTpp
     global errorArray
+    global warningArray
 
     if(len(sys.argv) < 2):
         errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-USE'))
@@ -785,9 +789,18 @@ def main():
         # To visualize the tree:
         #for pre, fill, node in RenderTree(root):
         #    print(f"{pre}{node.name}")
+
+    #print (errorArray)
+    #print (warningArray)
     
     if len(errorArray) > 0:
+        if len(warningArray) > 0:
+            errorArray += warningArray
+        #print (errorArray)
         raise IOError(errorArray)
+    
+    else:
+        return root, warningArray
 
 if __name__ == "__main__": 
     try:
