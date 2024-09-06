@@ -86,7 +86,7 @@ def walk_tree(node, path):
 
 def check_node_exists(node, error_code):
     """Check if node exists, otherwise report an error."""
-    if node is None:
+    if (not node):
         errorArray.append(error_handler.newError(checkKey, error_code))
         return False
     return True
@@ -300,7 +300,7 @@ def s_funcao_principal(root):
     ]
     
     # Walk the tree based on the predefined path
-    node_principal = walk_tree(root, path_to_main)
+    node_principal = find_all_paths(root, path_to_main)
 
     # Check if we found the main function node ("principal")
     if not check_node_exists(node_principal, 'ERR-SEM-MAIN-NOT-DECL'):
@@ -321,10 +321,37 @@ def s_declaracao_de_funcao(root):
     ]
 
     function_calls = find_all_nodes_children(root, function_path)
+    dec_funcs = find_all_nodes_children(root, cabecalho_path)
+    dec_temp = []
+
+    for i in range(len(dec_funcs)):
+        if (dec_funcs[i].name == "principal"):
+            dec_temp.append(dec_funcs[i])
+
+    for i in range(len(dec_temp)):
+        dec_funcs.remove(dec_temp[i])
 
     for function_call in function_calls:
+        dec_temp = []
+
+        for i in range(len(dec_funcs)):
+            if (function_call.name == dec_funcs[i].name):
+                dec_temp.append(dec_funcs[i])
+
+        for i in range(len(dec_temp)):
+            dec_funcs.remove(dec_temp[i])
+
         function_is_declared = False
         function_node = find_parent_node(function_call, "lista_declaracoes")
+
+        if (function_call.name == "principal"):
+            func_temp = walk_tree(function_node, cabecalho_path).children[0]
+            if (func_temp):
+                if (func_temp.name == "principal"):
+                    errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-CALL-REC-FUNC-MAIN'))
+                    continue
+            errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-MAIN-NOT-ALLOWED'))
+            continue
         
         while function_node:
             function_check = walk_tree(function_node, cabecalho_path)
@@ -338,6 +365,9 @@ def s_declaracao_de_funcao(root):
         
         if not function_is_declared:
             errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-CALL-FUNC-NOT-DECL'))
+
+    for i in range(len(dec_funcs)):
+        errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-FUNC-DECL-NOT-USED'))
 
 # checa se a quantidade de parametros reais e formais de uma funcao sao iguais
 def s_identificador_de_funcao(node_formal, node_real):
@@ -386,7 +416,7 @@ def s_retorno_de_funcao(root):
             if (retorno_check):
                 for j in range(len(retorno_check)):
                     retorno_var = retorno_check[j]
-                    comparator_type(root, retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR')
+                    comparator_type(root, retorno_var, function_type, 'ERR-SEM-FUNC-RET-TYPE-ERROR', var_dec_check=True)
 
             else:
                 retorno_check = find_all_nodes_children_with_parent(retorno, ["fator", "numero"], "expressao")
@@ -427,12 +457,11 @@ def s_variavel_nao_declarada(root):
         ]
 
         variables = find_all_paths(pai, variable_path)
-
         if (not variables and pai != root):
             variables = find_all_paths(root, variable_path)
 
         if (not variables):
-                errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-VAR-NOT-DECL'))
+            errorArray.append(error_handler.newError(checkKey, 'ERR-SEM-VAR-NOT-DECL'))
 
 # verifica se a variavel foi declarada, utilizada e inicializada
 def s_variavel_declarada_inicializada_utilizada(root):
@@ -573,6 +602,54 @@ def s_verifica_tipagem_atribuicao_variavel(root, dec_node, atr_node):
 
     # vai dar errado se tiver funcao dentro de funcao
     atr_node_funcs = find_all_paths_including_parent(atr_node, func_path, "expressao")
+
+    if (atr_node_nums and atr_node_vars):
+        for i in range (len(atr_node_nums)):
+            num_type = get_string_after_last_underscore(atr_node_nums[i].name)
+            if (num_type != dec_node_type.name):
+                 for j in range (len(atr_node_vars)):
+                    if (not comparator_type(root, atr_node_vars[j], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP", var_dec_check=True)):
+                        return "f_exp"
+    
+    if (atr_node_nums and atr_node_funcs):
+        for j in range (len(atr_node_nums)):
+            num_type = get_string_after_last_underscore(atr_node_nums[j].name)
+            if (num_type != dec_node_type.name):
+                for i in range (len(atr_node_funcs)):
+                    dec_func_path = [
+                        "cabecalho",
+                        "ID",
+                        atr_node_funcs[i].children[0].children[0].name
+                    ]
+
+                    dec_func_type_path = [
+                        "tipo",
+                        dec_node_type.name
+                    ]
+
+                    dec_func = find_all_paths_including_parent(root, dec_func_path, "declaracao_funcao")
+                    if (not walk_tree(dec_func[0].parent.parent.parent, dec_func_type_path)):
+                        errorArray.append(error_handler.newError(checkKey, 'WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP'))
+                        return "f_exp"
+
+    if (atr_node_funcs and atr_node_vars):
+        for i in range (len(atr_node_funcs)):
+            dec_func_path = [
+                "cabecalho",
+                "ID",
+                atr_node_funcs[i].children[0].children[0].name
+            ]
+
+            dec_func_type_path = [
+                "tipo",
+                dec_node_type.name
+            ]
+
+            dec_func = find_all_paths_including_parent(root, dec_func_path, "declaracao_funcao")
+            if (not walk_tree(dec_func[0].parent.parent.parent, dec_func_type_path)):
+                for j in range (len(atr_node_vars)):
+                    if (not comparator_type(root, atr_node_vars[j], dec_node_type.name, "WAR-SEM-ATR-DIFF-TYPES-IMP-COERC-OF-EXP", var_dec_check=True)):
+                        return "f_var"
 
     if (atr_node_nums):
         for i in range (len(atr_node_nums)):

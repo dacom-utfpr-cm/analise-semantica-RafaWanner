@@ -51,28 +51,3 @@ inteiro fatorial2(inteiro: fat, flutuante: fat2, inteiro: fat3)
 	{CHAMADA DE FUNÇÃO NORMAL}
 	fatorial(1, 1.0)
 fim
-
-{WARNING}
-
-{WARNING: ID m está recebendo valores incompatíveis: flutuante -> inteiro}
-{WARNING: função fatorial está retornando tipos incompatíveis: inteiro -> flutuante}
-{WARNING: ID a está recebendo valores incompatíveis: inteiro -> flutuante}
-{WARNING: ID b está recebendo valores incompatíveis: flutuante -> inteiro}
-
-{RESULTADO DA TABELA DE SIMBOLOS CORRETA!}
-
-{'fatorial': ['funcao', 'inteiro', ['inteiro', 'flutuante']],}
-{'fatorial.m': ['variável', 'flutuante', 0, True],}
-{'fatorial.n': ['variável', 'inteiro', 0, True],}
-{'fatorial.p': ['variável', 'flutuante', 0, False],}
-{'fatorial2': ['funcao', 'inteiro', ['inteiro', 'flutuante', 'inteiro']],}
-{'fatorial2.fat': ['variável', 'inteiro', 0, True],}
-{'fatorial2.fat2': ['variável', 'flutuante', 0, True],}
-{'fatorial2.fat3': ['variável', 'inteiro', 0, True],}
-{'global.a': ['variável', 'inteiro', 0, True],}
-{'global.b': ['variável', 'flutuante', 0, True],}
-{'global.n': ['variável', 'inteiro', 0, True],}
-{'global.x': ['variável', 'flutuante', 0, False],}
-{'global.y': ['variável', 'flutuante', 0, False],}
-{'global.z': ['variável', 'flutuante', 0, True],}
-{'principal': ['funcao', 'inteiro', []]}
